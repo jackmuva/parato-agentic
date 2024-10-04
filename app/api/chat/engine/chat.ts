@@ -1,4 +1,4 @@
-import { ContextChatEngine, Settings } from "llamaindex";
+import {ContextChatEngine, Settings, SimpleChatEngine} from "llamaindex";
 import { getDataSource } from "./index";
 import { nodeCitationProcessor } from "./nodePostprocessors";
 import { generateFilters } from "./queryFilter";
@@ -10,6 +10,18 @@ export async function createChatEngine(documentIds?: string[], params?: any) {
       `StorageContext is empty - call 'npm run generate' to generate the storage first`,
     );
   }
+  const permissionFilters = generateFilters(documentIds || []);
+
+  if(!permissionFilters.filters.length){
+    return new SimpleChatEngine({
+      llm:Settings.llm,
+    });
+  }
+  console.log("using context from the following documents");
+  console.log(documentIds);
+
+  console.log(permissionFilters);
+
   const retriever = index.asRetriever({
     similarityTopK: process.env.TOP_K ? parseInt(process.env.TOP_K) : undefined,
     filters: generateFilters(documentIds || []),

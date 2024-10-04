@@ -1,13 +1,28 @@
 "use client";
 
 import { useChat } from "ai/react";
-import { useState } from "react";
-import { ChatInput, ChatMessages } from "./ui/chat";
-import { useClientConfig } from "./ui/chat/hooks/use-config";
+import React, {useEffect, useState} from "react";
+import {useClientConfig} from "@/app/components/ui/chat/hooks/use-config";
+import {ChatInput, ChatMessages} from "@/app/components/ui/chat";
+import {AuthenticatedConnectUser} from "@useparagon/connect";
 
-export default function ChatSection() {
+
+
+interface ChildProps {
+  user: AuthenticatedConnectUser | null,
+}
+const ChatSection: React.FC<ChildProps> = (props) => {
   const { backend } = useClientConfig();
-  const [requestData, setRequestData] = useState<any>();
+  const [headers, setHeader] = useState<any>({"Content-Type": "application/json",})
+
+  useEffect(() => {
+    if(sessionStorage.getItem("jwt")){
+      // @ts-ignore
+      setHeader({...headers, "Authorization": "Bearer " + sessionStorage.getItem("jwt")});
+    }
+  }, [props.user]);
+
+
   const {
     messages,
     input,
@@ -19,39 +34,34 @@ export default function ChatSection() {
     append,
     setInput,
   } = useChat({
-    body: { data: requestData },
     api: `${backend}/api/chat`,
-    headers: {
-      "Content-Type": "application/json", // using JSON because of vercel/ai 2.2.26
-    },
+    headers: headers,
     onError: (error: unknown) => {
       if (!(error instanceof Error)) throw error;
       const message = JSON.parse(error.message);
       alert(message.detail);
     },
-    sendExtraMessageFields: true,
   });
 
   return (
-    <div className="space-y-4 w-full h-full flex flex-col">
-      <ChatMessages
-        messages={messages}
-        isLoading={isLoading}
-        reload={reload}
-        stop={stop}
-        append={append}
-      />
-      <ChatInput
-        input={input}
-        handleSubmit={handleSubmit}
-        handleInputChange={handleInputChange}
-        isLoading={isLoading}
-        messages={messages}
-        append={append}
-        setInput={setInput}
-        requestParams={{ params: requestData }}
-        setRequestData={setRequestData}
-      />
-    </div>
+      <div className="space-y-4 w-full h-full flex flex-col">
+        <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
+            reload={reload}
+            stop={stop}
+            append={append}
+        />
+        <ChatInput
+            input={input}
+            handleSubmit={handleSubmit}
+            handleInputChange={handleInputChange}
+            isLoading={isLoading}
+            messages={messages}
+            append={append}
+            setInput={setInput}
+        />
+      </div>
   );
 }
+export default ChatSection;

@@ -11,6 +11,9 @@ import {
 } from "./llamaindex/streaming/annotations";
 import { createCallbackManager } from "./llamaindex/streaming/events";
 import { generateNextQuestions } from "./llamaindex/streaming/suggestion";
+import jwt from "jsonwebtoken";
+import {getPermittedDocuments} from "@/app/api/permissions";
+import {createAgent} from "@/app/api/chat/engine/agent";
 
 initObservability();
 initSettings();
@@ -23,7 +26,18 @@ export async function POST(request: NextRequest) {
   const vercelStreamData = new StreamData();
 
   try {
+
     const body = await request.json();
+    const headers = request.headers;
+    let user: string | undefined | (() => string) = undefined;
+
+    if(headers.get("authorization")){
+      const token = headers.get("authorization")?.split(" ")[1];
+      const verified = jwt.verify(token ?? "", process.env.SIGNING_KEY?.replaceAll("\\n", "\n") ?? "");
+      user = verified.sub;
+    }
+    console.log("logged in user: " + user);
+
     const { messages, data }: { messages: Message[]; data?: any } = body;
     if (!isValidMessages(messages)) {
       return NextResponse.json(
@@ -36,10 +50,10 @@ export async function POST(request: NextRequest) {
     }
 
     // retrieve document ids from the annotations of all messages (if any)
-    const ids = retrieveDocumentIds(messages);
+    const ids = await getPermittedDocuments(user);
     // create chat engine with index using the document ids
-    const chatEngine = await createChatEngine(ids, data);
-
+    // const chatEngine = await createChatEngine(ids, data);
+    const chatEngine = await createAgent();
     // retrieve user message content from Vercel/AI format
     const userMessageContent = retrieveMessageContent(messages);
 
@@ -72,6 +86,7 @@ export async function POST(request: NextRequest) {
         });
     };
 
+    // @ts-ignore
     return LlamaIndexAdapter.toDataStreamResponse(response, {
       data: vercelStreamData,
       callbacks: { onFinal },
