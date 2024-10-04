@@ -1,4 +1,5 @@
 import {FunctionTool, OpenAIAgent} from "llamaindex";
+import {sendSlack, signJwt} from "@/app/utility/request-utilities";
 
 export async function createAgent(): Promise<OpenAIAgent>{
     return new OpenAIAgent({
@@ -14,8 +15,10 @@ export const draftSlackMessage = FunctionTool.from(
     },
     {
         name: "draftSlackMessage",
-        description: "Use this function to draft a message in Slack. Prompt confirmation from " +
-            "user to trigger the confirm and send step",
+        description: "Use this function to draft a message in Slack. This is a required function step" +
+            "before sending the message in Slack. Prompt confirmation from " +
+            "user to trigger the confirm and send step. This function does not send the message in" +
+            "Slack. This function only drafts a message and prompts for confirmation",
         parameters: {
             type: "object",
             properties: {
@@ -31,15 +34,22 @@ export const draftSlackMessage = FunctionTool.from(
 
 
 export const confirmAndSendSlackMessage = FunctionTool.from(
-    ({ confirmation, message }: { confirmation: string; message: string; }) => {
+    async({ confirmation, message }: { confirmation: string; message: string; }) => {
         console.log("Confirmed: " + confirmation);
         console.log("Slack Message: " + message);
-        return message;
+
+        //TODO: remove hard coded username!!!
+        const response = await sendSlack(message, signJwt("jack.mu@useparagon.com"));
+        if(response.statusCode){
+            return "Successfully Sent";
+        }
+        return "Message not sent successfully";
     },
     {
         name: "confirmAndSendSlackMessage",
-        description: "Use this function to send a message in Slack after a draft has been created. Do" +
-            "not use this function if an affirmative confirmation is given.",
+        description: "Use this function to send a message in Slack only after a draft has been created. Do" +
+            "not use this function if an affirmative confirmation is not given. Do not use this function if" +
+            "a draft has not been created",
         parameters: {
             type: "object",
             properties: {
