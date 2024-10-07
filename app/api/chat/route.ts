@@ -1,18 +1,18 @@
 import { initObservability } from "@/app/observability";
 import { LlamaIndexAdapter, Message, StreamData } from "ai";
-import {ChatMessage, Settings, SimpleChatEngine} from "llamaindex";
+import {ChatMessage, ContextChatEngine, Settings, SimpleChatEngine} from "llamaindex";
 import { NextRequest, NextResponse } from "next/server";
-import { createChatEngine } from "./engine/chat";
+import {OpenAIAgent} from "llamaindex";
 import { initSettings } from "./engine/settings";
 import {
   isValidMessages,
-  retrieveDocumentIds,
   retrieveMessageContent,
 } from "./llamaindex/streaming/annotations";
 import { createCallbackManager } from "./llamaindex/streaming/events";
 import { generateNextQuestions } from "./llamaindex/streaming/suggestion";
 import jwt from "jsonwebtoken";
 import {getPermittedDocuments} from "@/app/api/permissions";
+import {createChatEngine} from "@/app/api/chat/engine/chat";
 import {createAgent} from "@/app/api/chat/engine/agent";
 
 initObservability();
@@ -49,14 +49,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let chatEngine;
-
+    let chatEngine: OpenAIAgent | SimpleChatEngine | ContextChatEngine ;
     if(user){
-      // retrieve document ids from the annotations of all messages (if any)
       const ids = await getPermittedDocuments(user);
-      // create chat engine with index using the document ids
-      // const chatEngine = await createChatEngine(ids, data);
-      chatEngine = await createAgent(user);
+      console.log("Permitted Documents");
+      console.log(ids);
+      chatEngine = await createAgent(user, ids, data);
     } else{
       chatEngine = new SimpleChatEngine({
         llm:Settings.llm,

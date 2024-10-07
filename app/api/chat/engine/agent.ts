@@ -1,7 +1,9 @@
 import {FunctionTool, OpenAIAgent, QueryEngineTool} from "llamaindex";
 import {createSalesforceContact, sendSlack, signJwt} from "@/app/utility/request-utilities";
+import {getDataSource} from "@/app/api/chat/engine/index";
+import {generateFilters} from "@/app/api/chat/engine/queryFilter";
 
-export async function createAgent(userId: string | (() => string)): Promise<OpenAIAgent>{
+export async function createAgent(userId: string | (() => string), documentIds?: string[], params?: any): Promise<OpenAIAgent>{
     const draftSlackMessage = FunctionTool.from(
         ({ message}: { message: string; }) => {
             console.log("draft slack message: " + message);
@@ -146,13 +148,25 @@ export async function createAgent(userId: string | (() => string)): Promise<Open
             },
         }
     );
-    
-    // const queryEngineTool = new QueryEngineTool({
-    //     queryEngine:
-    // });
+
+    const index = await getDataSource(params);
+    const permissionFilters = generateFilters(documentIds || []);
+    const queryEngine = index.asQueryEngine({
+            similarityTopK: process.env.TOP_K ? parseInt(process.env.TOP_K) : 3,
+            preFilters: permissionFilters,
+        });
+
+    const queryEngineTool = new QueryEngineTool({
+        queryEngine: queryEngine,
+        metadata: {
+            description: "query engine to pinecone database",
+            name: "queryEngineTool"
+        }
+    });
 
     return new OpenAIAgent({
         tools: [draftSlackMessage, confirmAndSendSlackMessage,
-            draftSalesforceContact, confirmAndCreateSalesforceContact]
+            draftSalesforceContact, confirmAndCreateSalesforceContact,
+            queryEngineTool]
     });
 }

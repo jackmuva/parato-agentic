@@ -23,8 +23,8 @@ export async function createChatEngine(documentIds?: string[], params?: any) {
   console.log(permissionFilters);
 
   const retriever = index.asRetriever({
-    similarityTopK: process.env.TOP_K ? parseInt(process.env.TOP_K) : undefined,
-    filters: generateFilters(documentIds || []),
+    similarityTopK: process.env.TOP_K ? parseInt(process.env.TOP_K) : 3,
+    filters: permissionFilters,
   });
 
   const systemPrompt = process.env.SYSTEM_PROMPT;
