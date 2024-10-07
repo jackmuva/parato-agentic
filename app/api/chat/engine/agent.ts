@@ -1,9 +1,10 @@
 import {FunctionTool, OpenAIAgent} from "llamaindex";
-import {sendSlack, signJwt} from "@/app/utility/request-utilities";
+import {createSalesforceContact, sendSlack, signJwt} from "@/app/utility/request-utilities";
 
 export async function createAgent(): Promise<OpenAIAgent>{
     return new OpenAIAgent({
-        tools: [draftSlackMessage, confirmAndSendSlackMessage, createSalesforceContact]
+        tools: [draftSlackMessage, confirmAndSendSlackMessage,
+            draftSalesforceContact, confirmAndCreateSalesforceContact]
     });
 }
 
@@ -49,7 +50,7 @@ export const confirmAndSendSlackMessage = FunctionTool.from(
         name: "confirmAndSendSlackMessage",
         description: "Use this function to send a message in Slack only after a draft has been created. Do" +
             "not use this function if an affirmative confirmation is not given. Do not use this function if" +
-            "a draft has not been created",
+            "a Slack message draft has not been created",
         parameters: {
             type: "object",
             properties: {
@@ -59,7 +60,7 @@ export const confirmAndSendSlackMessage = FunctionTool.from(
                 },
                 confirmation: {
                     type: "string",
-                    description: "The draft message",
+                    description: "affirmative confirmation to send draft message",
                 },
             },
             required: ["confirmation", "message"],
@@ -72,28 +73,89 @@ export const confirmAndSendSlackMessage = FunctionTool.from(
 //   queryEngine:
 // })
 
-export const createSalesforceContact = FunctionTool.from(
-    ({ name, role }: { name: string, role: string}) => {
-        console.log("Salesforce name: " + name);
-        console.log("Salesforce role: " + role);
-        return [name, role];
+export const draftSalesforceContact = FunctionTool.from(
+    ({ first_name, last_name, email, title }: { first_name: string, last_name: string, email: string, title: string}) => {
+        console.log("Saleforce Contact Draft:");
+        console.log("Salesforce Contact first name: " + first_name);
+        console.log("Salesforce Contact last name: " + last_name);
+        console.log("Salesforce Contact email: " + email);
+        console.log("Salesforce Contact title: " + title);
+        return "Salesforce Contact first name: " + first_name + "\n" +
+            "Salesforce Contact last name: " + last_name + "\n" +
+            "Salesforce Contact email: " + email+ "\n" +
+            "Salesforce Contact title: " + title;
     },
     {
-        name: "createSalesforceContact",
-        description: "Use this function to create a contact in salesforce given their name and role",
+        name: "draftSalesforceContact",
+        description: "Use this function to draft a contact record in Salesforce. This is a required function step" +
+            "before creating a contact record in Salesforce. Prompt confirmation from " +
+            "user to trigger the Salesforce record confirm and send step. This function does not create the Contact record" +
+            "in Salesforce. This function only drafts a Contact record and prompts for confirmation",
         parameters: {
             type: "object",
             properties: {
-                name: {
+                first_name: {
                     type: "string",
-                    description: "Name of Salesforce contact",
+                    description: "First name of Salesforce contact",
                 },
-                role: {
+                last_name: {
                     type: "string",
-                    description: "role of Salesforce contact",
+                    description: "Last name of Salesforce contact",
+                },
+                email: {
+                    type: "string",
+                    description: "Email of Salesforce contact",
+                },
+                title: {
+                    type: "string",
+                    description: "Title of Salesforce contact",
                 },
             },
-            required: ["name", "role"],
+            required: ["first_name", "last_name", "email", "title"],
+        },
+    }
+);
+
+export const confirmAndCreateSalesforceContact = FunctionTool.from(
+    async({ confirmation, first_name, last_name, email, title }: { confirmation: string, first_name: string, last_name: string,
+        email: string, title: string}) => {
+        console.log("Confirmed Salesforce Contact Creation: " + confirmation);
+        const response = await createSalesforceContact({first_name, last_name, email, title}, signJwt("jack.mu@useparagon.com"));
+        if(response.statusCode){
+            return "Successfully created Salesforce Contact";
+        }
+        return "Salesforce Contact not created successfully";
+    },
+    {
+        name: "confirmAndCreateSalesforceContact",
+        description: "Use this function to create a Salesforce Contact record only after a draft has been created. Do" +
+            "not use this function if an affirmative confirmation is not given. Do not use this function if" +
+            "a draft Salesforce Contact record has not been created",
+        parameters: {
+            type: "object",
+            properties: {
+                confirmation: {
+                    type: "string",
+                    description: "affirmative confirmation to create Salesforce Contact record"
+                },
+                first_name: {
+                    type: "string",
+                    description: "First name of Salesforce contact",
+                },
+                last_name: {
+                    type: "string",
+                    description: "Last name of Salesforce contact",
+                },
+                email: {
+                    type: "string",
+                    description: "Email of Salesforce contact",
+                },
+                title: {
+                    type: "string",
+                    description: "Title of Salesforce contact",
+                },
+            },
+            required: ["confirmation", "first_name", "last_name", "email", "title"],
         },
     }
 );
