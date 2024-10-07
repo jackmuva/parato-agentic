@@ -1,6 +1,6 @@
 import { initObservability } from "@/app/observability";
 import { LlamaIndexAdapter, Message, StreamData } from "ai";
-import { ChatMessage, Settings } from "llamaindex";
+import {ChatMessage, Settings, SimpleChatEngine} from "llamaindex";
 import { NextRequest, NextResponse } from "next/server";
 import { createChatEngine } from "./engine/chat";
 import { initSettings } from "./engine/settings";
@@ -49,11 +49,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // retrieve document ids from the annotations of all messages (if any)
-    const ids = await getPermittedDocuments(user);
-    // create chat engine with index using the document ids
-    // const chatEngine = await createChatEngine(ids, data);
-    const chatEngine = await createAgent();
+    let chatEngine;
+
+    if(user){
+      // retrieve document ids from the annotations of all messages (if any)
+      const ids = await getPermittedDocuments(user);
+      // create chat engine with index using the document ids
+      // const chatEngine = await createChatEngine(ids, data);
+      chatEngine = await createAgent(user);
+    } else{
+      chatEngine = new SimpleChatEngine({
+        llm:Settings.llm,
+      });
+    }
+
     // retrieve user message content from Vercel/AI format
     const userMessageContent = retrieveMessageContent(messages);
 
