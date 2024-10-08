@@ -1,5 +1,17 @@
 This is a [LlamaIndex](https://www.llamaindex.ai/) project using [Next.js](https://nextjs.org/) bootstrapped with [`create-llama`](https://github.com/run-llama/LlamaIndexTS/tree/main/packages/create-llama).
 
+## Custom Components from this tutorial
+Most of the code generated is started code from `create-llama`.
+The custom code for this tutorial can be found in:
+- `app/components/integration-ui`: These are frontend modifications that allow users to authenticate and enable integrations
+- `app/hooks`: react hook that encapsulates the paragon authentication logic
+- `app/api/permissions`: POST endpoint and custom logic for receiving and processing permissions data
+- `app/api/salesforce-upload`: POST endpoint to receive Salesforce Objects
+- `app/api/route.ts`: the default chat API will now look for permissions from authenticated users
+- `app/api/chat/engine/agent.ts`: OpenAI Agent implementation with function tools
+- `utility/request-utilities.ts`: Functions that send POST requests to Paragon endpoint triggers for Salesforce and Slack
+
+
 ## Getting Started
 
 First, install the dependencies:
