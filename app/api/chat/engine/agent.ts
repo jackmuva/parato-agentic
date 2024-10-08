@@ -35,7 +35,7 @@ export async function createAgent(userId: string | (() => string), documentIds?:
             console.log("Slack Message: " + message);
 
             const response = await sendSlack(message, signJwt(userId));
-            if(response.statusCode){
+            if(response.status){
                 return "Successfully Sent";
             }
             return "Message not sent successfully";
@@ -110,10 +110,11 @@ export async function createAgent(userId: string | (() => string), documentIds?:
             email: string, title: string}) => {
             console.log("Confirmed Salesforce Contact Creation: " + confirmation);
             const response = await createSalesforceContact({first_name, last_name, email, title}, signJwt(userId));
-            if(response.statusCode){
+            console.log(response);
+            if(response.status === '200'){
                 return "Successfully created Salesforce Contact";
             }
-            return "Salesforce Contact not created successfully";
+            return response.error;
         },
         {
             name: "confirmAndCreateSalesforceContact",
